@@ -1,39 +1,40 @@
-from stat import ST_ATIME
-from selenium import webdriver
-from bs4 import BeautifulSoup
-import time
-import csv
+from bs4 import BeautifulSoup as bs
+import requests
+import pandas as pd
 
-START_URL = "https://exoplanets.nasa.gov/exoplanet-catalog/"
 
-browser = webdriver.Chrome("/Users/debas/Downloads/chromedriver_win32/chromedriver.exe")
+bright_stars_url = 'https://en.wikipedia.org/wiki/List_of_brightest_stars_and_other_record_stars'
 
-browser.get(START_URL)
+page = requests.get(bright_stars_url)
+print(page)
 
-time.sleep(10)
+soup = bs(page.text,'html.parser')
 
-def dataScrap():
-    headers = ["name", "light_years_from_earth", "planet_mass", "stellar_magnitude"]
-    planet_data=[]
-    for i in range(0,428):
-        soup = BeautifulSoup(browser.page_source , "html.parser")
-        for ul_tag in soup.find_all("ul" , attrs={"class" , "exoplanet"}):
-            temp_list = []
-            li_tags = ul_tag.find_all("li")
-            for index , li_tag in enumerate(li_tags):
-                if index == 0 :
-                    temp_list.append(li_tag.find_all("a")[0].contents[0])
-                else:
-                    try:
-                        temp_list.append(li_tag.contents[0])
-                    except:
-                        temp_list.append("")
-            planet_data.append(temp_list)
-        browser.find_element_by_xpath('//*[@id="primary_column"]/footer/div/div/div/nav/span[2]/a').click()
+star_table = soup.find('table')
 
-    with open("scrappedData.csv" , 'w') as f:
-        csvwriter = csv.writer(f)
-        csvwriter.writerow(headers)
-        csvwriter.writerows(planet_data)
+temp_list= []
+table_rows = star_table.find_all('tr')
+for tr in table_rows:
+    td = tr.find_all('td')
+    row = [i.text.rstrip() for i in td]
+    temp_list.append(row)
 
-dataScrap()
+
+
+Star_names = []
+Distance =[]
+Mass = []
+Radius =[]
+Lum = []
+
+for i in range(1,len(temp_list)):
+    Star_names.append(temp_list[i][1])
+    Distance.append(temp_list[i][3])
+    Mass.append(temp_list[i][5])
+    Radius.append(temp_list[i][6])
+    Lum.append(temp_list[i][7])
+    
+df2 = pd.DataFrame(list(zip(Star_names,Distance,Mass,Radius,Lum)),columns=['Star_name','Distance','Mass','Radius','Luminosity'])
+print(df2)
+
+df2.to_csv('bright_stars.csv')
